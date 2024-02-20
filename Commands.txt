@@ -1,0 +1,14 @@
+H: initiate handshake protocol
+P: power up command
+A: abort command
+F: flush serial command
+S: sending mode !
+C: configuration mode
+B: command mode (?)
+M: memory reset
+N: memory configuration
+R: reset
+S: rssi reading !
+U: temperature reading
+V: voltage reading
+0: non-volatile memory reading
