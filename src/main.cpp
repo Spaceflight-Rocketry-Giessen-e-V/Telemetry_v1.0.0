@@ -153,15 +153,21 @@ void setup()
 
   //Power up command
   {
-    while(true)
+    char powerup = 0;
+    while(powerup == 0)
     {
       Serial.print("Enter P to initiate power up command. | ");
-      while(Serial.available() == 0);
-      if(Serial.read() == 'P')
+      if(setup_user_input('P') == 1)
       {
         Serial2.print("CMDP");
-        Serial.print("Power up command sent. Waiting for incoming data package... | ");
-        break;
+        if(serial2_wait(5000000)!=0)
+        {
+          if(Serial2.read() == 'P')
+          {
+            Serial.print("Power up succeeded. Waiting for incoming data package... | ");
+            powerup = 1;
+          }
+        }
       }
     }
     while(Serial.available() != 0)
@@ -178,12 +184,14 @@ void setup()
 
   //Incoming data package
   {
-    while(Serial2.available() == 0);
-    delay_microsec(2000); // 3 * 600 + puffer
-    Serial.write('\n');
-    if(Serial2.available() >= 5)
+    if(setup_user_input() == 0)
     {
-      data_handling();
+      delay_microsec(2000); // 3 * 600 + puffer
+      Serial.write('\n');
+      if(Serial2.available() >= 5)
+      {
+        data_handling();
+      }
     }
   }
 
@@ -237,11 +245,15 @@ void loop()
   }
 }
 
-char setup_user_input(char condition)
+char setup_user_input(char condition = 0)
 {
   while(true)
   {
-    while(Serial.available() == 0);
+    while(Serial.available() == 0 && Serial2.available() == 0);
+    if(Serial2.available())
+    {
+      return 0;
+    }
     char input = Serial.read();
     if(input == condition)
     {
