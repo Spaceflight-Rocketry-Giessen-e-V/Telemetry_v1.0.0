@@ -37,6 +37,7 @@ void setup()
   //Data mode
   if(digitalRead(modepin) == HIGH)
   {
+    //Flash Chip auslesen, Programmieren, Radiomodul konfigurieren
     //eventuell Serialx.setRX(piny); und Serialx.setTX(pinz)
     Serial2.begin(19200); //Reffering to external serial connection
     //...
