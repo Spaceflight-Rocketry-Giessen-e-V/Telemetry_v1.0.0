@@ -1,29 +1,18 @@
-H: initiate handshake protocol
-P: power up command
 A: abort command
-F: flush serial command
-E: sending mode
 C: configuration mode
+D: flight mode command
+E: sending mode
+F: flush serial command
+H: initiate handshake protocol
 M: memory reset
 N: memory configuration
+P: power up command
 R: reset
 S: rssi reading
 U: temperature reading
 V: voltage reading
 0: non-volatile memory reading
-D: flight mode command
 
-A: abort command
-C: configuration mode
-D: flight mode command
-E: sending mode
-F: flush serial command
-H: initiate handshake protocol
-M: memory reset
-N: memory configuration
-P: power up command
-R: reset
-S: rssi reading
-U: temperature reading
-V: voltage reading
-0: non-volatile memory reading
+CMDH: Handshake package
+CMDP: Powerup command
+CMDD: Powerup command

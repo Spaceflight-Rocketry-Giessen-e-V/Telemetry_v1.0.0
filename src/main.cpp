@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+//Zeit schicken vor Testpaket
+
 unsigned const int delta_r_max = 3000;	    //Max. darstellbare Entfernung vom Startort in m
 unsigned const char delta_d_min = 6;	      //Min. darstellbare Auflösung des Standorts in m
 unsigned const char delta_h_min = 5;        //Min. darstellbare Auflösung der Höhe in m
@@ -8,15 +10,16 @@ signed int lat_ref = 0;
 signed int long_ref = 0;
 
 char inBuffer[5] = {0};
-
-int serial_wait(int delay_microsec);
-int serial2_wait(int delay_microsec);
+char inByte = 0;
 
 char handshake();
 char powerup();
 void reference_coordinates();
 void flightmode();
 
+
+int serial_wait(int delay_microsec);
+int serial2_wait(int delay_microsec);
 char check_serial_ports(char condition = 0);
 void flush_serial_ports();
 void data_handling();
@@ -96,10 +99,9 @@ void setup()
         }
       }
     }
-    flush_serial_ports();
   }
 
-  //Clock synchronization
+  //Clock synchronization (Zeit an Boden schicken)
 
   //Abort Cycle
   while(true)
@@ -108,7 +110,7 @@ void setup()
     {
       while(true)
       {
-        Serial.print("Enter P to initiate power up command. | ");
+        Serial.print("Enter P to initiate powerup procedure. | ");
         if(check_serial_ports('P') == 1)
         {
           if(powerup() == 1)
@@ -121,7 +123,6 @@ void setup()
           }
         }
       }
-      flush_serial_ports();
     }
 
     //Waiting for incoming reference coordinates
@@ -137,7 +138,7 @@ void setup()
     {
       if(check_serial_ports() == 2)
       {
-        delay_microsec(2000); // 3 * 600 + puffer
+        delay_microsec(2500); // 4 * 600 + puffer
         if(Serial2.available() >= 5)
         {
           data_handling();
@@ -147,11 +148,13 @@ void setup()
       flush_serial_ports();
     }
 
+    //Data Package ok?
+
     //Flight mode command
     {
       while(true)
       {
-        Serial.print("Enter D to initiate flight mode command. | ");
+        Serial.print("Enter D to initiate flight mode initialisation procedure. | ");
         if(check_serial_ports('D') == 1)
         {
           if(flightmode() == 1)
@@ -164,8 +167,9 @@ void setup()
           }
         }
       }
-      flush_serial_ports();
     }
+
+    //Abort Command Confirmation
 
     //Loop
     while(true)
@@ -178,7 +182,7 @@ void setup()
           while(Serial.available() == 0);
           if(Serial.read() == 'A')
           {
-            Serial.print("Abort command verified. Trying to abort. | ");
+            Serial.print("Abort command verified. Abort in progress. | ");
             for(char i = 0; i < 255; i++)
             {
               Serial2.print("CMDA");
@@ -209,74 +213,96 @@ void setup()
   }
 }
 
-void loop() 
-{
+void loop() {}
 
-}
-
-char handshake()
+char handshake() //Returning 1 if successful, 0 else
 {
   flush_serial_ports();
-  char[5] handshake_array = {'H', 0, 'H', 0, 0};
+  Serial.print("Initialising handshake procedure. | ");
   for(char i = 1; i <= 20; i++)
   {
-    handshake_array[1] = i;
-    handshake_array[3] = i;
-    Serial2.print(handshake_array);
+    //Transmitting handshake package
+    Serial2.print("CMDH");
+    //Waiting for handshake acknowledgement
     if(serial2_wait(5000000 != 0))
     {
-      for(char j = 0; j < 5 && serial2_wait(600); j++)
+      while(serial2_wait(600) != 0)
       {
-        inBuffer[i] = Serial2.read();
-      }
-      if(inBuffer[0] == 'H' && inBuffer[2] == 'H')
-      {
-        Serial.print("Handshake succeeded. Own handshake code: ");
-        Serial.print({i,i});
-        Serial.print(" Received handshake code: ");
-        Serial.print({inBuffer[1], inBuffer[3]});
-        Serial.print(" | ");
-        return 1;
-      }
-      else
-      {
-        Serial.print("Handshake failed. Trying again... | ");
+        inByte = Serial2.read();
+        if(inByte == '#')
+        {
+          Serial.print("Handshake succeeded in try " + String(i) + ". | ");
+          flush_serial_ports();
+          return 1;
+        }
+        else
+        {
+          Serial.print("Error H1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
+        }
       }
     }
     else
     {
-      Serial.print("Handshake failed. Trying again... | ");
+      Serial.print("Error H2 (No acknowledgement received). Trying again... | ");
     }
   }
-  Serial.print("Handshake failed. | ");
+  Serial.print("Error H3 (Handshake failed finally). | ");
+  flush_serial_ports();
   return 0;
 }
 
-char powerup()
+char powerup() //Returning 1 if successful, 0 else
 {
-  Serial2.print("CMDP");
-  if(serial2_wait(5000000)!=0)
+  flush_serial_ports();
+  Serial.print("Initialising powerup procedure. | ");
+  for(char i = 1; i <= 20; i++)
   {
-    if(Serial2.read() == 'P')
+    //Transmitting powerup package
+    Serial2.print("CMDP");
+    //Waiting for powerup acknowledgement
+    if(serial2_wait(5000000 != 0))
     {
-      Serial.print("Power up succeeded. Waiting for incoming data package... | ");
-      return 1;
+      while(serial2_wait(600) != 0)
+      {
+        inByte = Serial2.read();
+        if(inByte == '#')
+        {
+          Serial.print("Powerup succeeded in try " + String(i) + ". Waiting for incoming data package... | ");
+          flush_serial_ports();
+          return 1;
+        }
+        else
+        {
+          Serial.print("Error P1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
+        }
+      }
+    }
+    else
+    {
+      Serial.print("Error P2 (No acknowledgement received). Trying again... | ");
     }
   }
+  Serial.print("Error P3 (Powerup failed finally). | ");
+  flush_serial_ports();
   return 0;
 }
 
-void reference_coordinates()
+void reference_coordinates() //Incoming GPS without (e.g. 50111111 statt 50.111111)
 {
   lat_ref = 0;
   long_ref = 0;
-  char coordBuffer[19] = {0};
-  for(char i = 0; i < 19 && serial2_wait(600) != 0; i++)
+  //Buffer for coordinate input. 21 bytes, because: max. 2 x 9 bytes coordinates (1 byte for sign, 2 bytes for integer places, 6 bytes for decimal places) + 1 byte ';' + RSSI + '\0' at the end
+  char coordBuffer[21] = {0};
+  char i;
+  //Buffering coordinate input
+  for(i = 0; i < 21 && serial2_wait(600) != 0; i++)
   {
     coordBuffer[i] = Serial2.read();
   }
-  char i;
+  //Delete RSSI (last element in coordBuffer[])
+  coordBuffer[i] = 0;
   char sign = 1;
+  //Converting first part into latitude
   for(i = 0; i < 9 && coordBuffer[i] != ';'; i++)
   {
     if(coordBuffer[i] == '-')
@@ -290,6 +316,7 @@ void reference_coordinates()
     }
   }
   sign = 1;
+  //Converting second part into longitude
   for(i = i + 1; i < 19 && coordBuffer[i] != 0; i++)
   {
     if(coordBuffer[i] == '-')
@@ -304,20 +331,43 @@ void reference_coordinates()
   }
 }
 
-void flightmode()
+char flightmode()
 {
-  Serial2.print("CMDD");
-  if(serial2_wait(5000000)!=0)
+  flush_serial_ports();
+  Serial.print("Initialising flightmode procedure. | ");
+  for(char i = 1; i <= 20; i++)
   {
-    if(Serial2.read() == 'D')
+    //Transmitting flightmode package
+    Serial2.print("CMDD");
+    //Waiting for flightmode acknowledgement
+    if(serial2_wait(5000000 != 0))
     {
-      Serial.print("Flight mode command succeeded. | ");
-      powerup = 1;
+      while(serial2_wait(600) != 0)
+      {
+        inByte = Serial2.read();
+        if(inByte == '#')
+        {
+          Serial.print("Flightmode initialisation succeeded in try " + String(i) + ". | ");
+          flush_serial_ports();
+          return 1;
+        }
+        else
+        {
+          Serial.print("Error D1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
+        }
+      }
+    }
+    else
+    {
+      Serial.print("Error D2 (No acknowledgement received). Trying again... | ");
     }
   }
+  Serial.print("Error D3 (Flightmode initialisation failed finally). | ");
+  flush_serial_ports();
+  return 0;
 }
 
-
+//Config functions
 
 void sending_mode()
 {
@@ -679,7 +729,7 @@ void non_volatile_memory_reading()
   Serial2.write('X');
 }
 
-
+//Serial functions
 
 char check_serial_ports(char condition = 0)
 {
