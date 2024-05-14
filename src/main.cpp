@@ -637,83 +637,83 @@ void non_volatile_memory_reading()
     serial2_wait(5000);
     if(Serial2.available() != 0)
     {
-      char inBuffer[129] = {0};
+      char memoryBuffer[129] = {0};
       for(int i = 0; serial2_wait(5000) != 0; i++)
       {
-        inBuffer[i] = Serial2.read();
+        memoryBuffer[i] = Serial2.read();
       }
       Serial.print(" (0x00) RF Channel [4,0x04]:");
-      Serial.write(inBuffer[0x00]);
+      Serial.write(memoryBuffer[0x00]);
       Serial.print(" (0x01) RF Power [5,0x05]:");
-      Serial.write(inBuffer[0x01]);
+      Serial.write(memoryBuffer[0x01]);
       Serial.print(" (0x02) RF Data rate [3,0x03]:");
-      Serial.write(inBuffer[0x02]);
+      Serial.write(memoryBuffer[0x02]);
       Serial.print(" (0x04) SLEEP Mode [0,0x00]:");
-      Serial.write(inBuffer[0x04]);
+      Serial.write(memoryBuffer[0x04]);
       Serial.print(" (0x05) RSSI Mode [0,0x00]:");
-      Serial.write(inBuffer[0x05]);
+      Serial.write(memoryBuffer[0x05]);
       Serial.print(" (0x0E) Packet length high [0,0x00]:");
-      Serial.write(inBuffer[0x0E]);
+      Serial.write(memoryBuffer[0x0E]);
       Serial.print(" (0x0F) Packet length low [128,0x80]:");      
-      Serial.write(inBuffer[0x0F]);
+      Serial.write(memoryBuffer[0x0F]);
       Serial.print(" (0x10) Packet timeout [124,0x7C]:");
-      Serial.write(inBuffer[0x10]);
+      Serial.write(memoryBuffer[0x10]);
       Serial.print(" (0x11) Packet end character [0,0x00]:");
-      Serial.write(inBuffer[0x11]);
+      Serial.write(memoryBuffer[0x11]);
       Serial.print(" (0x14) Address mode [2,0x02]:");
-      Serial.write(inBuffer[0x14]);
+      Serial.write(memoryBuffer[0x14]);
       Serial.print(" (0x15) CRC mode [2,0x02]:");
-      Serial.write(inBuffer[0x15]);
+      Serial.write(memoryBuffer[0x15]);
       Serial.print(" (0x19) Unique ID 1 [1,0x01]:");
-      Serial.write(inBuffer[0x19]);
+      Serial.write(memoryBuffer[0x19]);
       Serial.print(" (0x1B) Unique ID 2 [1,0x01]:");
-      Serial.write(inBuffer[0x1B]);
+      Serial.write(memoryBuffer[0x1B]);
       Serial.print(" (0x1D) Unique ID 3 [1,0x01]:");
-      Serial.write(inBuffer[0x1D]);
+      Serial.write(memoryBuffer[0x1D]);
       Serial.print(" (0x1F) Unique ID 4 [1,0x01]:");
-      Serial.write(inBuffer[0x1F]);
+      Serial.write(memoryBuffer[0x1F]);
       Serial.print(" (0x1A) System ID 1 [1,0x01]:");
-      Serial.write(inBuffer[0x1A]);
+      Serial.write(memoryBuffer[0x1A]);
       Serial.print(" (0x1C) System ID 2 [1,0x01]:");
-      Serial.write(inBuffer[0x1C]);
+      Serial.write(memoryBuffer[0x1C]);
       Serial.print(" (0x1E) System ID 3 [1,0x01]:");
-      Serial.write(inBuffer[0x1E]);
+      Serial.write(memoryBuffer[0x1E]);
       Serial.print(" (0x20) System ID 4 [1,0x01]:");
-      Serial.write(inBuffer[0x20]);
+      Serial.write(memoryBuffer[0x20]);
       Serial.print(" (0x21) Destination ID 1 [1,0x01]:");
-      Serial.write(inBuffer[0x21]);
+      Serial.write(memoryBuffer[0x21]);
       Serial.print(" (0x22) Destination ID 2 [1,0x01]:");
-      Serial.write(inBuffer[0x22]);
+      Serial.write(memoryBuffer[0x22]);
       Serial.print(" (0x23) Destination ID 3 [1,0x01]:");
-      Serial.write(inBuffer[0x23]);
+      Serial.write(memoryBuffer[0x23]);
       Serial.print(" (0x24) Destination ID 4 [1,0x01]:");
-      Serial.write(inBuffer[0x24]);
+      Serial.write(memoryBuffer[0x24]);
       Serial.print(" (0x28) Broadcast address [255,0xFF]:");
-      Serial.write(inBuffer[0x28]);
+      Serial.write(memoryBuffer[0x28]);
       Serial.print(" (0x30) UART baud rate [5,0x05]:");
-      Serial.write(inBuffer[0x30]);
+      Serial.write(memoryBuffer[0x30]);
       Serial.print(" (0x31) UART number of bits [8,0x08]:");
-      Serial.write(inBuffer[0x31]);
+      Serial.write(memoryBuffer[0x31]);
       Serial.print(" (0x32) UART parity [0,0x00]:");
-      Serial.write(inBuffer[0x32]);
+      Serial.write(memoryBuffer[0x32]);
       Serial.print(" (0x33) UART stop bits [1,0x01]:");
-      Serial.write(inBuffer[0x33]);
+      Serial.write(memoryBuffer[0x33]);
       Serial.print(" (0x35) UART flow control [0,0x00]:");
-      Serial.write(inBuffer[0x35]);
+      Serial.write(memoryBuffer[0x35]);
       Serial.print(" (0x3C - 0x49) Part number:");
       for(int i = 0x3C; i <= 0x49; i++)
       {
-        Serial.write(inBuffer[i]);
+        Serial.write(memoryBuffer[i]);
       }
       Serial.print(" (0x4B - 0x4E) Hardware revision number:");
       for(int i = 0x4B; i <= 0x4E; i++)
       {
-        Serial.write(inBuffer[i]);
+        Serial.write(memoryBuffer[i]);
       }
       Serial.print(" (0x50 - 0x53) Software revision number:");
       for(int i = 0x50; i <= 0x53; i++)
       {
-        Serial.write(inBuffer[i]);
+        Serial.write(memoryBuffer[i]);
       }
       Serial.print("Finished. Returning to normal operation mode. | ");
     }
@@ -819,19 +819,19 @@ void data_handling()
   String s_parity = String(parity & 1);
 
   //Status
-  String s_status = String((input[1] & 0x0E) >> 1);
+  String s_status = String((inBuffer[1] & 0x0E) >> 1);
 
   //Height
-  String s_height = String(input[0] * delta_h_min);
+  String s_height = String(inBuffer[0] * delta_h_min);
 
   //GNSS/Coordinates
-  unsigned int lat_in = ((input[1] & 0xF0) >> 4) + ((input[2] & 0x3F) << 4);
-	unsigned int long_in = ((input[2] & 0xC0) >> 6) + ((input[3] & 0xFF) << 2);
+  unsigned int lat_in = ((inBuffer[1] & 0xF0) >> 4) + ((inBuffer[2] & 0x3F) << 4);
+	unsigned int long_in = ((inBuffer[2] & 0xC0) >> 6) + ((inBuffer[3] & 0xFF) << 2);
 	String s_latitude = String((lat_in * delta_d_min - (float)delta_r_max) / 0.1111949266 + lat_ref);
 	String s_longitude = String((long_in * delta_d_min - (float)delta_r_max) / 0.1111949266 + long_ref);
 
   //RSSI
-  String s_rssi = String((int)(-0.5*(float)input[4]));
+  String s_rssi = String((int)(-0.5*(float)inBufferf[4]));
 
   //Output
   Serial.print('\n' + s_parity + ';' + s_status + ';' + s_height + ';' + s_latitude + ';' + s_longitude + ';' + s_rssi);
