@@ -1,58 +1,48 @@
-#include <Arduino.h>
-#include <stdio.h>
+#include <SPI.h>
+#include <SD>
 
-//Pin allocation
-int ledpin1 = PIN_PD3;
-int ledpin2 = PIN_PD4;
-int modepin = PIN_PD5;
-int cfgpin = PIN_PD6;
-int rstpin = PIN_PD7;
-
-
-//UART0 = Radiomodul
+FILE myFile;
 
 void setup() {
- //Pin initialisation
-  {
-    pinMode(ledpin1, OUTPUT);
-    pinMode(ledpin2, OUTPUT);
-    pinMode(modepin, OUTPUT);
-    pinMode(cfgpin, OUTPUT);
-    pinMode(rstpin, OUTPUT);
-  }
-    //Pin standard mode
-  {
-    digitalWrite(modepin, HIGH);
-    digitalWrite(cfgpin, HIGH);
-    digitalWrite(rstpin, HIGH);
-    
-    digitalWrite(ledpin1, LOW);
-    digitalWrite(ledpin2, LOW);
 
-  }
-  //Serial configuration
-  {
-    Serial.begin(19200);
-    Serial0.begin(19200);
-  }
+  Serial.begin(19500)
+  SPI.begin();
+  SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
+
+  int SS1 = PA3; 
+
   
-  //Waiting for first user input
-  {
-    while(Serial.available() == 0);
-    Serial.read();
-    Serial.print("Setup complete. Entering normal operation mode. | ");
+   // see if the card is present and can be initialized:
+  if (!SD.begin(SS1)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    while(1);
   }
+  Serial.println("card initialized.");
+
+  SD.mkdir("test.txt");
+
+myFile = SD.open("test.txt", FILE_WRTIE);
+
+if(myFile) { //returns 1 if myFile is available
+  Serial.print("Writing text to test.txt...");
+  myFile.println("test 1,2,3. Is this text visible?");
+  myFile.close();
+  Serial.println("Done writing to test.text");
+}
+else 
+  Serial.println("Wasn't able to open 'test.txt'");
+
+myFile = SD.open("test.txt");
+if(myFile){
+  Serial.println("test.txt:");
+
+  while(myFile.available()) 
+  Serial.write(myFile.read());
 }
 
-void loop() {
-  //Test programm which indicates a fully functioning UPDI-programmer
-  for(int i=0; i<5; i++)
-  {
-    digitalWrite(ledpin1, HIGH);
-    delay(500);
-    digitalWrite(ledpin2, HIGH);
-    delay(1000);
-    digitalWrite(ledpin1, LOW);
-    digitalWrite(ledpin2, LOW);
-  }
+myFile.close();
+else 
+  // if the file didn't open, print an error:
+  Serial.println("error opening test.txt");
 }
