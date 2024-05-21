@@ -5,6 +5,11 @@ FILE myFile;
 
 void setup() {
 
+  // Set MOSI (PA4) and SCK (PA6) as output
+  PORTA.DIRSET = PIN4_bm | PIN6_bm;
+  // Set MISO (PA5) as input
+  PORTA.DIRCLR = PIN5_bm;
+  
   Serial.begin(19500)
   SPI.begin();
   SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
