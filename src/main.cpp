@@ -14,7 +14,7 @@ void setup() {
   SPI.begin();
   SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
 
-  int SS1 = PA3; 
+  int SS1 = PIN_PA3; 
 
   
    // see if the card is present and can be initialized:
