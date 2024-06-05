@@ -3,6 +3,7 @@ C: configuration mode
 D: flight mode command
 E: sending mode
 F: flush serial command
+G: release parachute
 H: initiate handshake protocol
 M: memory reset
 N: memory configuration
