@@ -61,21 +61,21 @@ void setup()
             //MISSING: Writing in log file
             break;
 
-          //Power up
-          case 'P':
+          //Power on
+          case 'O':
             PORTA.OUTSET = PIN7_bm //powerpin
             Serial0.write('#');
             //MISSING: Writing in log file
             break;
 
           //Reference Coordinates
-          case 'G':
+          case 'R':
             reference_coordinates();
             //MISSING: Writing in log file
             break;
 
           //Flight mode
-          case 'D':
+          case 'F':
             flightmode = 1;
             Serial0.write('#');
             //MISSING: Writing in log file
@@ -89,7 +89,7 @@ void setup()
             break;
 
           //Parachute deployment
-          case 'B':
+          case 'P':
             if(flightmode == 1)
             {
               PORTD.OUTSET = PIN2_bm //parachutepin
