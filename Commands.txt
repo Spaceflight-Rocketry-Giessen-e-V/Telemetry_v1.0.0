@@ -1,0 +1,23 @@
+A  ABORT
+B  FLUSH SERIAL
+C  configuration mode
+D  reset
+F  FLIGHT MODE
+H  HANDSHAKE
+M  memory reset
+N  memory configuration
+O  POWER ON
+P  PARACHUTE DEPLOYMENT
+R  REFERENCE COORDINATES
+S  SENDING MODE
+T  rssi reading
+U  temperature reading
+V  voltage reading
+0  non-volatile memory reading
+
+CMDA: Abort command
+CMDF: Flight command
+CMDH: Handshake protocol
+CMDO: Power on command
+CMDP: Parachute deployment
+CMDR: Reference coordinates
