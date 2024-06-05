@@ -185,6 +185,25 @@ void setup()
             Serial.print("Abort command cancelled. | ")
           }
         }
+	else if(Serial.read() == 'G')              //Parachute command
+        {
+          Serial.print("Parachute command detected. Please enter G to verify. | ");
+          while(Serial.available() == 0);
+          if(Serial.read() == 'G')
+          {
+            Serial.print("Parachute command verified. Parachute deployment in progress. | ");
+            for(char i = 0; i < 255; i++)
+            {
+              Serial2.print("CMDP");
+              delay(5);
+            }
+            break;
+          }
+          else
+          {
+            Serial.print("Abort command cancelled. | ")
+          }
+        }
         else if(Serial.read() == 'F')         //Flush Serial
         {
           flush_serial_ports();
