@@ -1,121 +1,193 @@
-#include <Arduino.h>
-#include <stdio.h>
-
-//Pin allocation
-int ledpin1 = 9;
-int ledpin2 = 10;
-int cfgpin = 12;
-int rstpin = 13;
-int powpin = 1;
-int modepin = 11;
-//eventuell SPI und UART Zuweisungen
+#include <avr/io.h>
 
 int serial0_wait(int delay_microsec);
 int serial1_wait(int delay_microsec);
 int serial2_wait(int delay_microsec);
 
+void flush_serial_ports();
+char radio_commands();
+void data_handing();
+void reference_coordinates();
+
+//Start byte: 'X', End byte: 'Y'
+const char package_length = 60;
+char data_package[package_length] = {0};
+
+char flightmode = 0;
+
 void setup() 
 {
-  //Pin initialisation
-  {
-    pinMode(ledpin1, OUTPUT);
-    pinMode(ledpin2, OUTPUT);
-    pinMode(cfgpin, OUTPUT);
-    pinMode(rstpin, OUTPUT);
-    pinMode(powpin, OUTPUT);
-    pinMode(modepin, INPUT);
-  }
+  //Pin initialisation (A7 (1): powerpin, D2 (8): parachutepin, D3 (9): ledpin1, D4 (10): ledpin2, D5 (11): modepin, D6 (12): cfgpin, D7 (13): rstpin)
+  PORTA.DIRSET = PIN7_bm;
+  PORTD.DIRCLR = PIN5_bm;
+  PORTD.DIRSET = PIN2_bm | PIN3_bm | PIN4_bm | PIN6_bm | PIN7_bm;
 
   //Pin standard mode
+  PORTA.OUTCLR = PIN7_bm;
+  PORTA.OUTCLR = PIN2_bm | PIN3_bm | PIN4_bm;
+  PORTD.OUTSET = PIN6_bm | PIN7_bm;
+
+  //MISSING: Storage cell initialisation
+  //MISSING: SD card initialisation
+
+  //Data mode
+  if(PORTD.IN & 0x10) //Reading 5th bit in PORTD (modepin)
   {
-    digitalWrite(powpin, LOW);
-    digitalWrite(rstpin, HIGH);
-    digitalWrite(cfgpin, HIGH);
+    PORTD.OUTSET = PIN3_bm; //ledpin1
+    Serial2.begin(19200); //External serial connection
+    //MISSING: Flash Chip auslesen, Programmieren, Radiomodul konfigurieren
   }
 
-  //Mode pin check
-  //Data mode
-  if(digitalRead(modepin) == HIGH)
-  {
-    //Flash Chip auslesen, Programmieren, Radiomodul konfigurieren
-    //eventuell Serialx.setRX(piny); und Serialx.setTX(pinz)
-    Serial2.begin(19200); //Reffering to external serial connection
-    //...
-  }
   //Normal operation mode
   else
   {
+    PORTD.OUTSET = PIN4_bm; //ledpin2
     //Serial configuration
-    {
-      //eventuell Serialx.setRX(piny); und Serialx.setTX(pinz)
-      Serial0.begin(19200); //Referring to the radio module
-    }
+    Serial0.begin(19200); //Radio module
+    Serial1.begin(19200); //Sensory subsystem
 
-    //Storage cell initialisation
-    {
-      //...
-    }
-    
-    char inByte;
-
-    //Handshake
+    //Standard operation loop
     while(true)
     {
-      if(Serial0.available())
+      //Checking for 4 incoming bytes over radio (all command from the ground station are 4 bytes ("CMDx"))
+      if(Serial0.available() >= 4)
       {
-        inByte = Serial0.read();
-        if(inByte == 'H')
+        switch(radio_commands())
         {
-          Serial0.write('H'); //To be interpreted in ground systems
-          break;
+          //Handshake
+          case 'H':
+            Serial0.write('#');
+            //MISSING: Writing in log file
+            break;
+
+          //Powerup
+          case 'P':
+            PORTA.OUTSET = PIN7_bm //powerpin
+            Serial0.write('#');
+            //MISSING: Writing in log file
+            break;
+
+          //Reference Coordinates
+          case 'G':
+            reference_coordinates();
+            //MISSING: Writing in log file
+            break;
+
+          //Flight mode
+          case 'D':
+            flightmode = 1;
+            Serial0.write('#');
+            //MISSING: Writing in log file
+            break;
+
+          //Abort Command
+          case 'A':
+            PORTA.OUTCLR = PIN7_bm //powerpin
+            flightmode = 0;
+            //MISSING: Writing in log file
+            break;
+
+          //Parachute deployment
+          case 'B':
+            if(flightmode == 1)
+            {
+              PORTD.OUTSET = PIN2_bm //parachutepin
+            }
+            //MISSING: Writing in log file
+            break;
         }
-      }      
-    }
-
-    //eventuell Uhrensynchronisation
-
-    //POW Pin HIGH
-    while(true)
-    {
-      while(Serial0.available() == 0);
-      char InBuffer[4] = {0};
-      //Puts received string into 8 byte array
-      for(int i = 0; i < 4 && serial0_wait(600); i++)
-      {
-        InBuffer[i] = Serial2.read();
       }
-      int q;
-      //Checks for a "C" char within the input
-      for(q = 0; InBuffer[q] != 'C' && q <= 4; q++);
-      //Checks for the string "CMD" within the Input
-      if(InBuffer[q] == 'C' && InBuffer[q+1] == 'M' && InBuffer[q+2] == 'D') 
+
+      //Checking for x incoming bytes from Serial1 (all data packages have length x)
+      if(Serial1.available() >= package_length)
       {
-        //Checks for a char "P" following a "CMD" string to set POW-Pin HIGH
-        if(InBuffer[q+3] == 'P') 
-        {
-          digitalWrite(powpin, LOW);
-          delay(5);
-          Serial1.begin(19200); //Referring to pin socket (bus)
-          break;
-        }
+        data_handing();
       }
     }
-    
-    //Function tests
-    {
-      
-    }
-
-
-
   }
 }
 
-void loop() 
+void loop() {}
+
+//Processing data coming from sensory subsystem
+void data_handing()
 {
-  
+  //Write input in global array
+  for(int i = 0; i < package_length && Serial0.available() >= package_length - i; i++)
+  {
+    data_package[i] = Serial0.read();
+  }
+  //Check for start and end byte
+  if(data_package[0] != 'X' || data_package[package_length-1] != 'Y')
+  {
+    //For wrong start or end byte: flush serial input
+    //MISSING: Write in log file
+    while(serial1_wait(600) != 0)
+    {
+      flush_serial_ports();
+    }
+    return;
+  }
+  //Only when in flightmode, data is stored and send via radio
+  if(flightmode == 1)
+  {
+    //MISSING: Splitting data_package array in individual variables
+    //MISSING: Checking parity
+    //MISSING: Storing data onboard
+    //MISSING: Sending data via radio
+  }
 }
 
+//Sending reference coordinates to ground station
+void reference_coordinates()
+{
+  //Functions need regular data package array
+  while(data_package[0] != 'X' || data_package[package_length - 1] != 'Y')
+  {
+    if(Serial1.available() >= package_length)
+    {
+      data_handing();
+    }
+  }
+  //MISSING: lat_ref and long_ref calculation
+  String lat_ref = ;
+  String long_ref = ;
+  //MISSING: removing dots from strings
+  Serial0.print(lat_ref + ';' + long_ref);
+}
+
+//Flushing all serial ports
+void flush_serial_ports()
+{
+  while(Serial0.available() != 0)
+  {
+    Serial0.read();
+  }
+  while(Serial1.available() != 0)
+  {
+    Serial1.read();
+  }
+  while(Serial2.available() != 0)
+  {
+    Serial2.read();
+  }
+}
+
+//Processing commands received by the radio module
+char radio_commands()
+{
+  char cmd_buffer[4] = {0};
+  for(int i = 0; i < 4 && Serial0.available() >= 4 - i; i++)
+  {
+    cmd_buffer[i] = Serial0.read();
+  }
+  if(cmd_buffer[0] == 'C' && cmd_buffer[1] == 'M' && cmd_buffer[2] == 'D')
+  {
+    return cmd_buffer[3];
+  }
+  flush_serial_ports();
+  return 0;
+}
 
 //Waiting whether serial.available() == true in given time
 int serial0_wait(int delay_microsec)
