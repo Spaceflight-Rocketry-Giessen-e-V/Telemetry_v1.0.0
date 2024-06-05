@@ -100,10 +100,10 @@ void setup()
     {
       while(true)
       {
-        Serial.print("Enter P to initiate powerup procedure. | ");
+        Serial.print("Enter O to initiate poweron procedure. | ");
         if(check_serial_ports('P') == 1)
         {
-          if(powerup() == 1)
+          if(poweron() == 1)
           {
             break;
           }
@@ -144,7 +144,7 @@ void setup()
     {
       while(true)
       {
-        Serial.print("Enter D to initiate flight mode initialisation procedure. | ");
+        Serial.print("Enter F to initiate flight mode initialisation procedure. | ");
         if(check_serial_ports('D') == 1)
         {
           if(flightmode() == 1)
@@ -185,16 +185,16 @@ void setup()
             Serial.print("Abort command cancelled. | ")
           }
         }
-	else if(Serial.read() == 'B')              //Parachute command
+	else if(Serial.read() == 'P')              //Parachute command
         {
-          Serial.print("Parachute command detected. Please enter G to verify. | ");
+          Serial.print("Parachute command detected. Please enter P to verify. | ");
           while(Serial.available() == 0);
           if(Serial.read() == 'B')
           {
             Serial.print("Parachute command verified. Parachute deployment in progress. | ");
             for(char i = 0; i < 255; i++)
             {
-              Serial2.print("CMDB");
+              Serial2.print("CMDP");
               delay(5);
             }
             break;
@@ -204,7 +204,7 @@ void setup()
             Serial.print("Parachute deployment cancelled. | ")
           }
         }
-        else if(Serial.read() == 'F')         //Flush Serial
+        else if(Serial.read() == 'B')         //Flush Serial
         {
           flush_serial_ports();
           Serial.print("Serial ports flushed. | ");
@@ -260,15 +260,15 @@ char handshake() //Returning 1 if successful, 0 else
   return 0;
 }
 
-char powerup() //Returning 1 if successful, 0 else
+char poweron() //Returning 1 if successful, 0 else
 {
   flush_serial_ports();
-  Serial.print("Initialising powerup procedure. | ");
+  Serial.print("Initialising poweron procedure. | ");
   for(char i = 1; i <= 20; i++)
   {
-    //Transmitting powerup package
-    Serial2.print("CMDP");
-    //Waiting for powerup acknowledgement
+    //Transmitting poweron package
+    Serial2.print("CMDO");
+    //Waiting for poweron acknowledgement
     if(serial2_wait(5000000 != 0))
     {
       while(serial2_wait(600) != 0)
@@ -276,22 +276,22 @@ char powerup() //Returning 1 if successful, 0 else
         inByte = Serial2.read();
         if(inByte == '#')
         {
-          Serial.print("Powerup succeeded in try " + String(i) + ". Waiting for incoming data package... | ");
+          Serial.print("Poweron succeeded in try " + String(i) + ". Waiting for incoming data package... | ");
           flush_serial_ports();
           return 1;
         }
         else
         {
-          Serial.print("Error P1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
+          Serial.print("Error O1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
         }
       }
     }
     else
     {
-      Serial.print("Error P2 (No acknowledgement received). Trying again... | ");
+      Serial.print("Error O2 (No acknowledgement received). Trying again... | ");
     }
   }
-  Serial.print("Error P3 (Powerup failed finally). | ");
+  Serial.print("Error O3 (Powerup failed finally). | ");
   flush_serial_ports();
   return 0;
 }
@@ -347,7 +347,7 @@ char flightmode()
   for(char i = 1; i <= 20; i++)
   {
     //Transmitting flightmode package
-    Serial2.print("CMDD");
+    Serial2.print("CMDF");
     //Waiting for flightmode acknowledgement
     if(serial2_wait(5000000 != 0))
     {
@@ -362,16 +362,16 @@ char flightmode()
         }
         else
         {
-          Serial.print("Error D1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
+          Serial.print("Error F1 (Wrong acknowledgement received (" + inByte + ")). Trying again... | ");
         }
       }
     }
     else
     {
-      Serial.print("Error D2 (No acknowledgement received). Trying again... | ");
+      Serial.print("Error F2 (No acknowledgement received). Trying again... | ");
     }
   }
-  Serial.print("Error D3 (Flightmode initialisation failed finally). | ");
+  Serial.print("Error F3 (Flightmode initialisation failed finally). | ");
   flush_serial_ports();
   return 0;
 }
@@ -391,7 +391,7 @@ char check_serial_ports(char condition = 0)
     switch (input)
     case condition:
       return 1;
-    case 'E':
+    case 'S':
       sending_mode();
       break;
     case 'C':
@@ -403,10 +403,10 @@ char check_serial_ports(char condition = 0)
     case 'N':
       memory_configuration();
       break;
-    case 'R':
+    case 'D':
       reset();
       break;
-    case 'S':
+    case 'T':
       rssi_reading();
       break;
     case 'U':
