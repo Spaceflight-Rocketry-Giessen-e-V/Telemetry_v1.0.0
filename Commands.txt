@@ -1,9 +1,10 @@
 A: abort command
+B: release parachute
 C: configuration mode
 D: flight mode command
 E: sending mode
 F: flush serial command
-G: release parachute
+G: request reference coordinates
 H: initiate handshake protocol
 M: memory reset
 N: memory configuration
