@@ -296,7 +296,7 @@ char powerup() //Returning 1 if successful, 0 else
   return 0;
 }
 
-void reference_coordinates() //Incoming GPS without (e.g. 50111111 statt 50.111111)
+void reference_coordinates() //Incoming GPS without dot (e.g. 50111111 statt 50.111111)
 {
   lat_ref = 0;
   long_ref = 0;
