@@ -358,7 +358,7 @@ void data_handling()
   String s_rssi = String((int)(-0.5*(float)inBufferf[4]));
 
   //Output
-  Serial.print('\n' + s_parity + ';' + s_status + ';' + s_height + ';' + s_latitude + ';' + s_longitude + ';' + s_rssi + ';');
+  Serial.print('\n' + ';' + s_parity + ';' + s_status + ';' + s_height + ';' + s_latitude + ';' + s_longitude + ';' + s_rssi + ';');
 }
 
 char user_commands()
