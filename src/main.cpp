@@ -17,7 +17,7 @@ char flightmode = 0;
 
 void setup() 
 {
-  //Pin initialisation (A7 (1): powerpin, D2 (8): parachutepin, D3 (9): ledpin1, D4 (10): ledpin2, D5 (11): modepin, D6 (12): cfgpin, D7 (13): rstpin)
+  //Pin initialisation (A7 (1): powerpin, C2 (4): statuspin1, C3 (5): statuspin2, D2 (8): parachutepin, D3 (9): ledpin1, D4 (10): ledpin2, D5 (11): modepin, D6 (12): cfgpin, D7 (13): rstpin)
   PORTA.DIRSET = PIN7_bm;
   PORTC.DIRCLR = PIN2_bm | PIN3_bm;
   PORTD.DIRCLR = PIN5_bm;
@@ -132,7 +132,7 @@ void data_handing()
   //Only when in flightmode, data is stored and send via radio
   if(flightmode == 1)
   {
-    String status = String(10 * PORTC_IN & 0x03 + PORTC_IN & 0x02); //Result: 00/01/10/11
+    String status = String(10 * PORTC_IN & 0x03 + PORTC_IN & 0x02); //Result: "00"/"01"/"10"/"11"
     //MISSING: Splitting data_package array in individual variables
     //MISSING: Checking parity
     //MISSING: Storing data onboard
