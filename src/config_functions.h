@@ -1,29 +1,5 @@
 #include <Arduino.h>
 
-void sending_mode()
-{
-  Serial.print("Entered sending mode. Enter the string to be transmitted. ");
-  char sendingBuffer[129] = {0};
-  while(Serial.available() == 0);
-  while(Serial.available() != 0)
-  {
-    int i;
-    for(i = 0; i < 128 && serial_wait(600); i++)
-    {
-      sendingBuffer[i] = Serial.read();
-    }
-    Serial.print("Successfully transmitted ");
-    for(int j = 0; j < i; j++)
-    {
-      Serial2.write(sendingBuffer[j]);
-      Serial.write(sendingBuffer[j]);
-    }
-    Serial.print(". ");
-    delay(20);
-  }
-  Serial.print("Sending complete. Entering normal operation mode. | ");
-}
-
 void configuration()
 {
   digitalWrite(cfgpin, LOW);

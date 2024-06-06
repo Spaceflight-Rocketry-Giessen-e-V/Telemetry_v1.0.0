@@ -17,6 +17,7 @@ char handshake();
 char powerup();
 void reference_coordinates();
 void flightmode();
+void sending_mode();
 
 int serial_wait(int delay_microsec);
 int serial2_wait(int delay_microsec);
@@ -51,7 +52,6 @@ void setup()
     digitalWrite(rstpin, HIGH);
     digitalWrite(cfgpin, HIGH);
     digitalWrite(rtspin, HIGH);
-    
     digitalWrite(ledpin1, LOW);
     digitalWrite(ledpin2, LOW);
     digitalWrite(ledpin3, LOW);
@@ -71,6 +71,11 @@ void setup()
     while(Serial.available() == 0);
     flush_serial_ports();
   }
+
+  //
+
+
+
   
   //Handshake protocol
   {
@@ -185,7 +190,7 @@ void setup()
             Serial.print("Abort command cancelled. | ")
           }
         }
-	else if(Serial.read() == 'P')              //Parachute command
+	      else if(Serial.read() == 'P')              //Parachute command
         {
           Serial.print("Parachute command detected. Please enter P to verify. | ");
           while(Serial.available() == 0);
@@ -423,6 +428,30 @@ char check_serial_ports(char condition = 0)
       break;
     Serial.print("Enter " + condition + " to continue the setup process. | ");
   }
+}
+
+void sending_mode()
+{
+  Serial.print("Entered sending mode. Enter the string to be transmitted. ");
+  char sendingBuffer[129] = {0};
+  while(Serial.available() == 0);
+  while(Serial.available() != 0)
+  {
+    int i;
+    for(i = 0; i < 128 && serial_wait(600); i++)
+    {
+      sendingBuffer[i] = Serial.read();
+    }
+    Serial.print("Successfully transmitted ");
+    for(int j = 0; j < i; j++)
+    {
+      Serial2.write(sendingBuffer[j]);
+      Serial.write(sendingBuffer[j]);
+    }
+    Serial.print(". ");
+    delay(20);
+  }
+  Serial.print("Sending complete. Entering normal operation mode. | ");
 }
 
 void flush_serial_ports()
