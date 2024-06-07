@@ -54,6 +54,8 @@ void setup()
     Serial0.begin(19200); //Radio module
     Serial1.begin(19200); //Sensory subsystem
 
+    unsigned int standby_counter = 0; //For sending regular standby messages
+
     //Standard operation loop
     while(true)
     {
@@ -110,6 +112,13 @@ void setup()
       if(Serial1.available() >= package_length_min)
       {
         data_handing();
+      }
+
+      //Sending standby messages
+      standby_counter %= 10000;
+      if(standby_counter == 0)
+      {
+        Serial0.write('^');
       }
     }
   }
