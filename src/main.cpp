@@ -115,10 +115,14 @@ void setup()
       }
 
       //Sending standby messages
-      standby_counter %= 10000;
-      if(standby_counter == 0)
+      if(flightmode == 0)
       {
-        Serial0.write('^');
+        standby_counter %= 10000;
+        if(standby_counter == 0)
+        {
+          Serial0.write('^');
+        }
+        standby_counter++;
       }
     }
   }
