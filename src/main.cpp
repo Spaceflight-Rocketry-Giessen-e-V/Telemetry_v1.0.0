@@ -9,9 +9,16 @@ char radio_commands();
 void data_handing();
 void reference_coordinates();
 
-//Start byte: 'X', End byte: 'Y'
-const char package_length = 60;
-char data_package[package_length] = {0};
+const char package_length_max = 96; //max package length possible with 19200 baud
+const char package_length_min = 64; //min package length possible with data
+char data_package[package_length_max] = {0};
+
+unsigned const int delta_r_max = 3000;	    //max displayable distance from starting point in m
+unsigned const char delta_d_min = 6;	      //min displayable resolution of current location in m
+unsigned const char delta_h_min = 5;        //min displayable resolution of current height in m
+
+unsigned long int lat_ref = 0;
+unsigned long int long_ref = 0;
 
 char flightmode = 0;
 
@@ -99,8 +106,8 @@ void setup()
         }
       }
 
-      //Checking for x incoming bytes from Serial1 (all data packages have length x)
-      if(Serial1.available() >= package_length)
+      //Checking for 64x incoming bytes from Serial1 (all data packages have at least length 64)
+      if(Serial1.available() >= package_length_min)
       {
         data_handing();
       }
@@ -114,12 +121,14 @@ void loop() {}
 void data_handing()
 {
   //Write input in global array
-  for(int i = 0; i < package_length && Serial0.available() >= package_length - i; i++)
+  int i;
+  for(i = 0; i < package_length_max - 1 && serial0_wait(600) != 0; i++)
   {
     data_package[i] = Serial0.read();
   }
+  data_package[i + 1] = ';';
   //Check for start and end byte
-  if(data_package[0] != 'X' || data_package[package_length-1] != 'Y')
+  if(data_package[0] != 'X' || data_package[i] != 'Y')
   {
     //For wrong start or end byte: flush serial input
     //MISSING: Write in log file
@@ -132,11 +141,66 @@ void data_handing()
   //Only when in flightmode, data is stored and send via radio
   if(flightmode == 1)
   {
-    String status = String(10 * PORTC_IN & 0x03 + PORTC_IN & 0x02); //Result: "00"/"01"/"10"/"11"
-    //MISSING: Splitting data_package array in individual variables
-    //MISSING: Checking parity
-    //MISSING: Storing data onboard
-    //MISSING: Sending data via radio
+    unsigned char output_buffer[5] = {0}; //Fifth byte = '\0' for easy Serial.print()
+
+    unsigned long int status = (PORTC_IN & 0x03) << 8 + PORTC_IN & 0x02 //Result: 00/01/10/11
+    
+    double data[13] = { 0 }; //13 different values are sent
+    long int dot = 0;
+    //Values are seperated and written as double in data array
+    for (int i = 2, j = 0; j < 13; i++)
+    {
+      char tmp = data_package[i];
+      if (tmp == ';')
+      {
+        dot = 0;
+        j++;
+      }
+      else if (j == 1 || j == 2 || j == 11)
+      {
+        if (tmp == '.')
+        {
+          dot = 10;
+        }
+        else if (dot == 0)
+        {
+          data[j] *= 10;
+          data[j] += (double)(tmp - '0');
+        }
+        else
+        {
+          data[j] += (double)(tmp - '0') / dot;
+          dot *= 10;
+        }
+      }
+    }
+    //Result: data[1]: latitude, data[2]: longitude, data[11]: height
+
+    unsigned char height = data[11] / delta_h_min;
+
+    unsigned long int latidude = 0x3FF & (long int)((delta_r_max + ((int)(data[1] * 1000000) - lat_ref) * 0.1111949266) / delta_d_min);
+    unsigned long int longitude = 0x3FF & (long int)((delta_r_max + ((int)(data[2] * 1000000) - long_ref) * 0.1111949266) / delta_d_min);
+
+    output_buffer[0] = (0x0FF & height);
+    output_buffer[1] |= ((0x00F & latidude) << 4) + ((0xFFF & status) << 1);
+	  output_buffer[2] |= ((0x3F0 & latidude) >> 4) + ((0x003 & longitude) << 6);
+	  output_buffer[3] |= ((0x3FC & longitude) >> 2);
+
+    //Parity
+    unsigned long int parity_calc = output_buffer[0] + (output_buffer[1] << 8) + (output_buffer[2] << 16) + (output_buffer[3] << 24);
+    parity_calc ^= parity_calc >> 16;
+    parity_calc ^= parity_calc >> 8;
+    parity_calc ^= parity_calc >> 4;
+    parity_calc ^= parity_calc >> 2;
+    parity_calc ^= parity_calc >> 1;
+    unsigned char parity = parity_calc & 1;
+
+    output_buffer[1] |= (0x001 & parity);
+
+    //MISSING: Storing data onboard (First send \n !!)
+
+    //Sending 4 bytes of data over radio
+    Serial0.print(output_buffer);
   }
 }
 
@@ -144,18 +208,49 @@ void data_handing()
 void reference_coordinates()
 {
   //Functions need regular data package array
-  while(data_package[0] != 'X' || data_package[package_length - 1] != 'Y')
+  while(data_package[0] != 'X')
   {
-    if(Serial1.available() >= package_length)
+    if(Serial1.available() >= package_length_min)
     {
       data_handing();
     }
   }
-  //MISSING: lat_ref and long_ref calculation
-  String lat_ref = ;
-  String long_ref = ;
-  //MISSING: removing dots from strings
-  Serial0.print(lat_ref + ';' + long_ref);
+
+  //Process similar to data handling, only values two and three important (latitude, longitude)
+  double data[3] = { 0 };
+  long int dot = 0;
+  for (int i = 2, j = 0; j < 3; i++)
+  {
+    char tmp = data_package[i];
+    if (tmp == ';')
+    {
+      dot = 0;
+      j++;
+    }
+    else if (j == 0 || j == 1 || j == 11)
+    {
+      if (tmp == '.')
+      {
+        dot = 10;
+      }
+      else if (dot == 0)
+      {
+        data[j] *= 10;
+        data[j] += (double)(tmp - '0');
+      }
+      else
+      {
+        data[j] += (double)(tmp - '0') / dot;
+        dot *= 10;
+      }
+    }
+  }
+
+  //Conversion double to long int (49.123456 -> 49123456)
+  lat_ref = data[1] * 1000000;
+  long_ref = data[2] * 1000000;
+
+  Serial0.print(String(lat_ref) + ';' + String(long_ref));
 }
 
 //Flushing all serial ports
