@@ -6,7 +6,7 @@ int serial2_wait(int delay_microsec);
 
 void flush_serial_ports();
 char radio_commands();
-void data_handing();
+void data_handling();
 void reference_coordinates();
 
 const char package_length_max = 96; //max package length possible with 19200 baud
@@ -39,7 +39,7 @@ void setup()
   //MISSING: SD card initialisation
 
   //Data mode
-  if(PORTD.IN & 0x10) //Reading 5th bit in PORTD (modepin)
+  if(PORTD.IN & 0x10) //Reading 5th bit in PORTD (modepin) (try using bitmaps?)
   {
     PORTD.OUTSET = PIN3_bm; //ledpin1
     Serial2.begin(19200); //External serial connection
@@ -66,7 +66,7 @@ void setup()
         {
           //Handshake
           case 'H':
-            Serial0.write('#');
+            Serial0.write('#'); //'#' referring to confirmation
             //MISSING: Writing in log file
             break;
 
@@ -108,10 +108,10 @@ void setup()
         }
       }
 
-      //Checking for 64x incoming bytes from Serial1 (all data packages have at least length 64)
+      //Checking for 64 incoming bytes from Serial1 (all data packages have at least length 64)
       if(Serial1.available() >= package_length_min)
       {
-        data_handing();
+        data_handling();
       }
 
       //Sending standby messages
@@ -120,7 +120,7 @@ void setup()
         standby_counter %= 10000;
         if(standby_counter == 0)
         {
-          Serial0.write('^');
+          Serial0.write('^'); //referring to confirmation of stand-by
         }
         standby_counter++;
       }
@@ -128,24 +128,25 @@ void setup()
   }
 }
 
-void loop() {}
+void loop() {} //if functional: Change void setup() to main() and delete void loop()
 
 //Processing data coming from sensory subsystem
-void data_handing()
+void data_handling()
 {
   //Write input in global array
   int i;
-  for(i = 0; i < package_length_max - 1 && serial0_wait(600) != 0; i++)
+  for(i = 0; i < package_length_max - 2 && serial0_wait(600) != 0; i++)
   {
     data_package[i] = Serial0.read();
   }
   data_package[i + 1] = ';';
+  data_package[i + 2] = 0; //defininug end byte
+	
   //Check for start and end byte
   if(data_package[0] != 'X' || data_package[i] != 'Y')
   {
-    //For wrong start or end byte: flush serial input
     //MISSING: Write in log file
-    while(serial1_wait(600) != 0)
+    while(serial1_wait(600) != 0) //For wrong start or end byte: flush serial input
     {
       flush_serial_ports();
     }
@@ -156,17 +157,17 @@ void data_handing()
   {
     unsigned char output_buffer[5] = {0}; //Fifth byte = '\0' for easy Serial.print()
 
-    unsigned long int status = (PORTC_IN & 0x03) << 8 + PORTC_IN & 0x02 //Result: 00/01/10/11
+    unsigned long int status = (PORTC.IN & 0x03) << 8 + PORTC.IN & 0x02 //Result: 00/01/10/11 //test: change hex-codes to bitmaps
     
-    double data[13] = { 0 }; //13 different values are sent
+    double data[13] = { 0 }; //13 different values are sent //received strings are changed to double
     long int dot = 0;
     //Values are seperated and written as double in data array
     for (int i = 2, j = 0; j < 13; i++)
     {
-      char tmp = data_package[i];
+      char tmp = data_package[i]; //tmp as temporary variable for copying data-package
       if (tmp == ';')
       {
-        dot = 0;
+        dot = 0; //0 referring to position in front of komma
         j++;
       }
       else if (j == 1 || j == 2 || j == 11)
@@ -200,13 +201,13 @@ void data_handing()
 	  output_buffer[3] |= ((0x3FC & longitude) >> 2);
 
     //Parity
-    unsigned long int parity_calc = output_buffer[0] + (output_buffer[1] << 8) + (output_buffer[2] << 16) + (output_buffer[3] << 24);
-    parity_calc ^= parity_calc >> 16;
-    parity_calc ^= parity_calc >> 8;
-    parity_calc ^= parity_calc >> 4;
-    parity_calc ^= parity_calc >> 2;
-    parity_calc ^= parity_calc >> 1;
-    unsigned char parity = parity_calc & 1;
+    unsigned long int parity = output_buffer[0] + (output_buffer[1] << 8) + (output_buffer[2] << 16) + (output_buffer[3] << 24);
+    parity ^= parity >> 16;
+    parity ^= parity >> 8;
+    parity ^= parity >> 4;
+    parity ^= parity >> 2;
+    parity ^= parity >> 1;
+    
 
     output_buffer[1] |= (0x001 & parity);
 
@@ -225,7 +226,7 @@ void reference_coordinates()
   {
     if(Serial1.available() >= package_length_min)
     {
-      data_handing();
+      data_handling();
     }
   }
 
