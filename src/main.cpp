@@ -9,8 +9,8 @@ char radio_commands();
 void data_handling();
 void reference_coordinates();
 
-const char package_length_max = 96; //max package length possible with 19200 baud
-const char package_length_min = 64; //min package length possible with data
+const char package_length_max = 192;        //max package length possible with 38400 baud
+const char package_length_min = 64;         //min package length possible
 char data_package[package_length_max] = {0};
 
 unsigned const int delta_r_max = 3000;	    //max displayable distance from starting point in m
@@ -157,11 +157,12 @@ void data_handling()
   {
     unsigned char output_buffer[5] = {0}; //Fifth byte = '\0' for easy Serial.print()
 
-    unsigned long int status = (PORTC.IN & 0x03) << 8 + PORTC.IN & 0x02 //Result: 00/01/10/11 //test: change hex-codes to bitmaps
+    //status pins are read and written in 2 bits
+    unsigned char status = (PORTC.IN & 0x03) << 1 + PORTC.IN & 0x02 //Result: 00/01/10/11 //test: change hex-codes to bitmaps
     
-    double data[13] = { 0 }; //13 different values are sent //received strings are changed to double
-    long int dot = 0;
+    double data[13] = { 0 }; //13 different values are sent and will be stored in this array
     //Values are seperated and written as double in data array
+    long int dot = 0;
     for (int i = 2, j = 0; j < 13; i++)
     {
       char tmp = data_package[i]; //tmp as temporary variable for copying data-package
@@ -176,12 +177,12 @@ void data_handling()
         {
           dot = 10;
         }
-        else if (dot == 0)
+        else if (dot == 0) //conversion of integer digits
         {
           data[j] *= 10;
           data[j] += (double)(tmp - '0');
         }
-        else
+        else //conversion of decimal digits
         {
           data[j] += (double)(tmp - '0') / dot;
           dot *= 10;
@@ -190,17 +191,24 @@ void data_handling()
     }
     //Result: data[1]: latitude, data[2]: longitude, data[11]: height
 
+    //height is compressed to 8 bits
+    if(data[11] < 0)
+    {
+      data[11] = 0;
+    }
     unsigned char height = data[11] / delta_h_min;
 
+    //latitude and longitude are compressed to 10 bits each
     unsigned long int latidude = 0x3FF & (long int)((delta_r_max + ((int)(data[1] * 1000000) - lat_ref) * 0.1111949266) / delta_d_min);
     unsigned long int longitude = 0x3FF & (long int)((delta_r_max + ((int)(data[2] * 1000000) - long_ref) * 0.1111949266) / delta_d_min);
 
+    //height, status, latitude and longitude are stored in output array
     output_buffer[0] = (0x0FF & height);
-    output_buffer[1] |= ((0x00F & latidude) << 4) + ((0xFFF & status) << 1);
+    output_buffer[1] |= ((0x00F & latidude) << 4) + ((0x00E & status) << 1);
 	  output_buffer[2] |= ((0x3F0 & latidude) >> 4) + ((0x003 & longitude) << 6);
 	  output_buffer[3] |= ((0x3FC & longitude) >> 2);
 
-    //Parity
+    //Parity is calculated
     unsigned long int parity = output_buffer[0] + (output_buffer[1] << 8) + (output_buffer[2] << 16) + (output_buffer[3] << 24);
     parity ^= parity >> 16;
     parity ^= parity >> 8;
@@ -208,7 +216,7 @@ void data_handling()
     parity ^= parity >> 2;
     parity ^= parity >> 1;
     
-
+    //parity is stored in output array
     output_buffer[1] |= (0x001 & parity);
 
     //MISSING: Storing data onboard (First send \n !!)
@@ -221,7 +229,7 @@ void data_handling()
 //Sending reference coordinates to ground station
 void reference_coordinates()
 {
-  //Functions need regular data package array
+  //Function needs regular data package array
   while(data_package[0] != 'X')
   {
     if(Serial1.available() >= package_length_min)
@@ -241,7 +249,7 @@ void reference_coordinates()
       dot = 0;
       j++;
     }
-    else if (j == 0 || j == 1 || j == 11)
+    else if (j == 1 || j == 2)
     {
       if (tmp == '.')
       {
@@ -258,7 +266,7 @@ void reference_coordinates()
         dot *= 10;
       }
     }
-  }
+    //Result: data[1]: latitude, data[2]: longitude
 
   //Conversion double to long int (49.123456 -> 49123456)
   lat_ref = data[1] * 1000000;
@@ -288,12 +296,15 @@ void flush_serial_ports()
 char radio_commands()
 {
   char cmd_buffer[4] = {0};
+  //Storing input in buffer
   for(int i = 0; i < 4 && Serial0.available() >= 4 - i; i++)
   {
     cmd_buffer[i] = Serial0.read();
   }
+  //Checking for "CMD" at beginning of input
   if(cmd_buffer[0] == 'C' && cmd_buffer[1] == 'M' && cmd_buffer[2] == 'D')
   {
+    //Returning the command byte (last byte)
     return cmd_buffer[3];
   }
   flush_serial_ports();
