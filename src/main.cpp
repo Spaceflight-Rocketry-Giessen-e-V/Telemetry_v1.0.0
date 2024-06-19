@@ -13,7 +13,7 @@ void flightmode();
 void handshake();
 void poweron();
 void parachute();
-void reference_coordinates()
+void reference_coordinates();
 void sending_mode();
 
 void data_handling();
