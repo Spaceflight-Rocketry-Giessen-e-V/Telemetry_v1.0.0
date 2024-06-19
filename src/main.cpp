@@ -9,8 +9,8 @@ char radio_commands();
 void data_handling();
 void reference_coordinates();
 
-const char package_length_max = 192;        //max package length possible with 38400 baud
-const char package_length_min = 64;         //min package length possible
+unsigned const char package_length_max = 192;        //max package length possible with 38400 baud
+unsigned const char package_length_min = 64;         //min package length possible
 char data_package[package_length_max] = {0};
 
 unsigned const int delta_r_max = 3000;	    //max displayable distance from starting point in m
